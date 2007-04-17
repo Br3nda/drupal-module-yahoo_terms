@@ -265,13 +265,14 @@ function _yahoo_terms_process_node() {
 /**
  * Implements of hook_nodeapi()
  */
-function yahoo_terms_nodeapi(&$node, $op) {
+function yahoo_terms_nodeapi(&$node, $op, $vid = NULL, $query = NULL) {
   switch ($op) {
     case 'terms_tagging':
-      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
+      $vid = ($vid === NULL) ? variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE) : $vid;
       $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
       if (is_numeric($vid)) {
-        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+        $query = ($query === NULL) ? "" : $query;
+        yahoo_terms_node_assign_keywords($node, $query, array(), $vid);
       }
       else {
         return;
