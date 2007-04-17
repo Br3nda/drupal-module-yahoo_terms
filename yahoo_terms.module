@@ -1,0 +1,438 @@
+<?php
+/**
+ * @file
+ * Provides an interface to other modules to use Yahoo Term Extractor service
+ * Required: cURL
+ * Sponsored by Development Seed.
+ *
+ * @author
+ * Aron Novak <aron at novaak dot net>
+ * 
+ */
+
+/**
+ * Where the service URL is
+ */
+define('EXTRACT_TERMS_URL', 'http://api.search.yahoo.com/ContentAnalysisService/V1/termExtraction');
+/**
+ * Each application has a unique ID from Yahoo
+ */
+define('YAHOO_APP_ID', variable_get('yahoo_terms_appid', ''));
+/**
+ * Permission that enable the user to use the yahoo term service
+ *
+ */
+define('YAHOO_TERMS_USE', "yahoo_terms_usage");
+/**
+ * Do not extract terms via nodeapi
+ */
+define('YAHOO_TERMS_ONLY_MANUALLY', 0);
+/**
+ * Extract terms on nodeapi - creation op
+ */
+define('YAHOO_TERMS_ON_NODE_CREATION', 1);
+/**
+ * Extract terms on nodeapi - creation and update op
+ */
+define('YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE', 2);
+
+function yahoo_terms_help($section) {
+  switch ($section) {
+     case 'admin/modules#description': 
+       return t('Extract terms from English language texts and nodes and save into the taxonomy hierarchy');
+       break; 
+   } 
+}
+/**
+ * Parse the given text with the term extractor service.
+ *
+ * @param string $text
+ * The text what have to be analyize
+ * @param string $query
+ * A special string that passed to the Yahoo API to achieve better match in term extraction
+ * @param integer $limit
+ * The maximal number of returned terms
+ * @param array $blacklist
+ * The terms that should be dropped anyway. Eg. array("the", "or", "etc")
+ * @return array
+ * All the terms that returned by the Yahoo Term Extractor except the blacklist. For eg. array("term1", "term2")
+ */
+function yahoo_terms_text_get_keywords($text, $query = "", $limit = -1, $blacklist = array()) {
+  if (!function_exists('curl_init')) {
+    return FALSE;
+  }
+  $yahoo_options = array('appid' => YAHOO_APP_ID,
+                         'context' => $text,
+                         'query' => $query,
+                         'output' => 'php');
+  $query_yahooapi = curl_init(EXTRACT_TERMS_URL);
+  curl_setopt($query_yahooapi, CURLOPT_POST, 1);
+  curl_setopt($query_yahooapi, CURLOPT_POSTFIELDS, $yahoo_options);
+  curl_setopt($query_yahooapi, CURLOPT_RETURNTRANSFER, 1);
+  $result = curl_exec($query_yahooapi);
+  if (curl_errno($query_yahooapi) != 0) {
+    return FALSE;
+  }
+  else {
+    curl_close($query_yahooapi);
+  }
+  $result = unserialize($result);
+  if (!is_array($result['ResultSet']['Result'])) {
+    return array();
+  }
+  if ($limit != -1) {
+    $result = array_slice($result['ResultSet']['Result'], 0, $limit);
+  } else {
+    $result = $result['ResultSet']['Result'];
+  }
+  $result = array_unique($result);
+  // Drop the blacklist items
+  if (count($blacklist) > 0) {
+    foreach($result as $id => $term) {
+      if(in_array($term, $blacklist)) {
+        unset($result[$id]);
+      }
+    }
+  }
+  return $result;
+}
+
+/**
+ * Parse the given node's body and assign 
+ *
+ * @param object $node
+ * The node to be parsed
+ * @param array $blacklist
+ * The terms that should be dropped anyway. Eg. array("the", "or", "etc")
+ * @param integer $vid
+ * The vocabulary ID where the terms should be saved
+ * @param boolean $static
+ * Only use the current terms in the vocabulary or expand with the new terms, TRUE - not epxand, FALSE - expand. Default: FALSE
+ */
+function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid, $static = FALSE) {
+  $text = $node->body;
+  $limit = variable_get('yahoo_terms_taxonomy_limit_for_'. $node->type, FALSE);
+  $limit = ($limit === FALSE) ? variable_get('yahoo_terms_taxonomy_limit', -1) : $limit;
+  $terms = yahoo_terms_text_get_keywords($text, $query, $limit, $blacklist);
+  $tids = _yahoo_terms_create_vocabulary_items($terms, $vid, $static);
+  $node->taxonomy = array_merge($node->taxonomy, $tids);
+  taxonomy_node_save($node->nid, $tids);
+}
+
+/**
+ * Create the proper terms in the given vocabulary. For internal use
+ *
+ * @param array $keywords
+ * The array
+ * @param integer $vid
+ * The vocabulary ID where the terms should be saved
+ * @param boolean $static
+ * Only use the current terms in the vocabulary or expand with the new terms, TRUE - not epxand, FALSE - expand
+ * @return array
+ * The array of term id's
+ */
+function _yahoo_terms_create_vocabulary_items($keywords, $vid, $static) {
+  if ($vid == FALSE) {
+    return FALSE;
+  }
+  $tids = array();
+  foreach ($keywords as $term) {
+    $curr_term = taxonomy_get_term_by_name($term);
+    if (count($curr_term) != 0) {
+      $curr_term = $curr_term[0];
+      if ($curr_term->vid == $vid) {
+        $tids[] = $curr_term;
+      } else if ($static == FALSE) {
+        $new_term['name'] = $term;
+        $new_term['vid'] = $vid;
+        taxonomy_save_term($new_term);
+        $tids[] = taxonomy_get_term($new_term['tid']);
+        unset($new_term);
+      }
+    }
+    else {
+      if ($static == FALSE) {
+        $new_term['name'] = $term;
+        $new_term['vid'] = $vid;
+        taxonomy_save_term($new_term);
+        $tids[] = taxonomy_get_term($new_term['tid']);
+        unset($new_term);
+      }
+    }
+  }
+  return $tids;
+}
+
+/**
+ * The settings form
+ */
+function yahoo_terms_settings() {
+  $form['yahoo_terms_appid'] = array(
+    '#title' => t('Yahoo Application ID'),
+    '#description' => t('An Application ID is a string that uniquely identifies your application.
+                         Think of it as a User-Agent string. If you have multiple applications,
+                         you must use a different ID for each one.'),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#default_value' => variable_get('yahoo_terms_appid', ''),
+  );
+  
+  $form['yahoo_terms_taxonomy_limit'] = array(
+    '#title' => t('Maximal number of terms'),
+    '#description' => t('Maximal number of terms which are associated to one article. -1 means no limit.'),
+    '#type' => 'textfield',
+    '#required' => TRUE,
+    '#default_value' => variable_get('yahoo_terms_taxonomy_limit', -1),
+  );
+  $form['yahoo_terms_enable_link'] = array(
+    '#title' => t('Show per-node manual term extraction link'),
+    '#description' => t('Maximal number of terms which are associated to one article. -1 means no limit.'),
+    '#type' => 'checkbox',
+    '#default_value' => variable_get('yahoo_terms_enable_link', FALSE),
+  );
+  $form['yahoo_terms_enable_runtime'] = array(
+    '#type' => 'radios',
+    '#options' => array(YAHOO_TERMS_ON_NODE_CREATION => t("Extract terms everytime node is created"),
+                        YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE => t("Extract terms everytime node is created or updated"),
+                        YAHOO_TERMS_ONLY_MANUALLY => t("Only extract terms manually")),
+    '#default_value' => variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY),
+  );
+  $select_voc = _yahoo_terms_vocab_select();
+  $form['yahoo_terms_vocab'] = array(
+    '#title' => t('Default vocabulary for Yahoo Terms'),
+    '#description' => t('If not a different vocabulary is specified for a leech, this one will be used.'),
+    '#type' => 'select',
+    '#options' => $select_voc,
+    '#required' => TRUE,
+    '#default_value' => variable_get('yahoo_terms_vocab', ''),
+  );
+  return $form;
+}
+
+/**
+ * Implements hook_perm()
+ */
+function yahoo_terms_perm() {
+  return array(YAHOO_TERMS_USE);
+}
+
+/**
+ * Implements hook_link()
+ */
+function yahoo_terms_link($type, $node = NULL, $teaser = FALSE) {
+  if ($type == 'node' && $node != NULL) {
+    if(user_access(YAHOO_TERMS_USE) && user_access("administer nodes") && variable_get('yahoo_terms_enable_link', FALSE)) {
+      $links[] = l(t('Extract the terms with Yahoo Term Extractor'), 'yahoo_terms/'. $node->nid);
+    }
+  }
+  return $links;
+}
+
+/**
+ * Implements hook_menu()
+ */
+function yahoo_terms_menu() {
+  $items = array();
+  $items[] = array('path' => 'yahoo_terms', 'title' => t('Extraction...'),
+      'callback' => '_yahoo_terms_process_node', 'access' => user_access(YAHOO_TERMS_USE),
+      'type' => MENU_CALLBACK);
+  $items[] = array('path' => 'yahoo_terms/batch', 'title' => t('Yahoo Terms batch processing'),
+      'callback' => 'yahoo_terms_batch', 'access' => user_access(YAHOO_TERMS_USE) && user_access('administer nodes'));
+  return $items;
+}
+
+/**
+ * Do the term assigning to the given node in the argument
+ *
+ * @return unknown
+ */
+function _yahoo_terms_process_node() {
+  $nid = arg(1);
+  if (is_numeric($nid)) {
+    $vid = variable_get('yahoo_terms_vocab', FALSE);
+    if ($vid === FALSE) {
+      return t("Please do the settings of Yahoo Terms module before use.");
+    }
+    $node = node_load($nid);
+    yahoo_terms_node_assign_keywords($node, $query, array(), $vid);
+  }
+  else {
+    return t("The given argument is not valid.");
+  }
+  drupal_goto("node/". $nid);
+}
+
+/**
+ * Implements of hook_nodeapi()
+ */
+function yahoo_terms_nodeapi(&$node, $op) {
+  switch ($op) {
+    case 'terms_tagging':
+      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
+      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      if (is_numeric($vid)) {
+        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+      }
+      else {
+        return;
+      }
+      break;
+    case 'insert':
+      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
+      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
+      if (is_numeric($vid) && ($automatic == YAHOO_TERMS_ON_NODE_CREATION || $automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE)) {
+        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+      }
+      break;
+    case 'update':
+      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
+      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
+      if (is_numeric($vid) && $automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE) {
+        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+      }
+      break;
+    case 'prepare':
+      $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
+      if ($automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE && isset($node->nid)) {
+        $node->taxonomy = array();
+      }
+      break;
+  }
+}
+
+function yahoo_terms_form_alter($form_id, &$form) { 
+  if (strpos($form_id, '_node_settings') !== FALSE) {
+    $node_type = str_replace('_node_settings', '', $form_id);
+    $select_voc = _yahoo_terms_vocab_select();
+    $form['workflow']['yahoo_terms'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Yahoo Terms options specifically for %type', array("%type" => $node_type)),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE
+    );
+    $form['workflow']['yahoo_terms']['yahoo_terms_taxonomy_limit_for_'. $node_type] = array(
+      '#title' => t('Maximal number of terms'),
+      '#description' => t('Maximal number of terms which are associated to one article. -1 means no limit.'),
+      '#type' => 'textfield',
+      '#required' => TRUE,
+      '#default_value' => variable_get('yahoo_terms_taxonomy_limit_for_'. $node_type, -1),
+    );
+    $form['workflow']['yahoo_terms']['yahoo_terms_vocab_for_'. $node_type] = array(
+      '#title' => t('Default vocabulary for Yahoo Terms'),
+      '#description' => t('This is the vocabulary where the terms will be created'),
+      '#type' => 'select',
+      '#options' => $select_voc,
+      '#required' => TRUE,
+      '#default_value' => variable_get('yahoo_terms_vocab_for_'. $node_type, ''),
+    );
+    $form['workflow']['yahoo_terms']['yahoo_terms_process_existing_'. $node_type] = array(
+      '#title' => t('Process existing content in this type'),
+      '#description' => t('This function is done in cron-time, so a working and regularly called cron is
+                           required. All the assigned terms are dropped and replaced with the extracted ones.
+                           After the cron run this option will be unchecked, so if you check it on, it will
+                           be processed once.'),
+      '#type' => 'checkbox',
+      '#return_value' => TRUE,
+      '#required' => FALSE,
+      '#default_value' => variable_get('yahoo_terms_process_existing_'. $node_type, FALSE),
+    ); 
+  }
+}
+
+/**
+ * Provides the form for batch tagging
+ */
+function yahoo_terms_batch() {
+  $form['yahoo_terms_batch'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Batch tag a content type'),
+      '#description' => t('Tag all the nodes with this content type immediately. If you want to achieve it automatically, please check out the specific content type\'s settings page'),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE
+  );
+  $types = node_get_types();
+  foreach ($types as $key => $type) {
+    $select[$key] = $key;
+  }
+  unset($types);
+  $form['yahoo_terms_batch']['type'] = array(
+      '#title' => t('Content type'),
+      '#type' => 'select',
+      '#options' => $select,
+      '#required' => TRUE,
+  );
+  $select_voc = _yahoo_terms_vocab_select();
+  $form['yahoo_terms_batch']['vid'] = array(
+    '#title' => t('Vocabulary where the terms will be created'),
+    '#type' => 'select',
+    '#options' => $select_voc,
+    '#required' => TRUE,
+    '#default_value' => variable_get('yahoo_terms_vocab', ''),
+  );
+  $form['yahoo_terms_batch']['rewrite'] = array(
+    '#title' => t('Re-tag already tagged nodes'),
+    '#type' => 'checkbox',
+    '#default_value' => FALSE
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Start tagging'
+  );
+  return drupal_get_form('yahoo_terms_batch', $form);
+}
+
+/**
+ * Batch tagging a specific content type
+ */
+function yahoo_terms_batch_submit($form_id, $form_values) {
+  timer_start("yahoo_terms_batch");
+  $num_of_processed = 0;
+  $result = db_query("SELECT nid FROM {node} WHERE type = '%s'", $form_values['type']);
+  while ($node = db_fetch_array($result)) {
+    $node = node_load($node['nid']);
+    if ( (!isset($node->taxonomy) || count($node->taxonomy) == 0) || $form_values['rewrite']) {
+      yahoo_terms_node_assign_keywords($node, "", array(), $form_values['vid']);
+      $num_of_processed++;
+    }
+  }
+  $timer = timer_read("yahoo_terms_batch");
+  drupal_set_message(t("%number node(s) are processed in %sec second", array("%number" => $num_of_processed, "%sec" => ($timer / 1000))));
+}
+
+/**
+ * Prepare an array to pass to the Forms API to select a vocabulary. For internal use
+ *
+ * @return array
+ */
+function _yahoo_terms_vocab_select() {
+  $vocabularies = db_query('SELECT v.vid, v.name FROM {vocabulary} v WHERE module="taxonomy"');
+  while ($voc = db_fetch_array($vocabularies)) {
+    $select_voc[$voc['vid']] = $voc['name'];
+  }
+  if (count($select_voc) < 1) {
+    $select_voc[0] = 'No vocabularies found'; 
+  }
+  return $select_voc;
+}
+
+/**
+ * Batch processing whole content-types at cron time according to content-type's settings page
+ *
+ */
+function yahoo_terms_cron() {
+  $types = node_get_types();
+  foreach($types as $type => $type_object) {
+    if (variable_get('yahoo_terms_process_existing_'. $type, FALSE) == TRUE) {
+      variable_set('yahoo_terms_process_existing_'. $type, FALSE);
+      $result = db_query("SELECT nid FROM {node} WHERE type = '%s'", $type);
+      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
+      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      while ($node = db_fetch_array($result)) {
+        $node = node_load($node['nid']);
+        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+      }
+    }
+  }
+}
