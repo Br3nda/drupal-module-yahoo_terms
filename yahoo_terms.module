@@ -178,15 +178,15 @@ function yahoo_terms_settings() {
   );
   
   $form['yahoo_terms_taxonomy_limit'] = array(
-    '#title' => t('Maximal number of terms'),
-    '#description' => t('Maximal number of terms which are associated to one article. -1 means no limit.'),
+    '#title' => t('Maximum number of terms'),
+    '#description' => t('Maximum number of terms per node. -1 means no limit.'),
     '#type' => 'textfield',
     '#required' => TRUE,
     '#default_value' => variable_get('yahoo_terms_taxonomy_limit', -1),
   );
   $form['yahoo_terms_enable_link'] = array(
-    '#title' => t('Show per-node manual term extraction link'),
-    '#description' => t('Maximal number of terms which are associated to one article. -1 means no limit.'),
+    '#title' => t('Show manual term extraction link on nodes'),
+    '#description' => t('If checked, a "extract terms" link will show every node.'),
     '#type' => 'checkbox',
     '#default_value' => variable_get('yahoo_terms_enable_link', FALSE),
   );
@@ -200,7 +200,7 @@ function yahoo_terms_settings() {
   $select_voc = _yahoo_terms_vocab_select();
   $form['yahoo_terms_vocab'] = array(
     '#title' => t('Default vocabulary for Yahoo Terms'),
-    '#description' => t('If not a different vocabulary is specified for a leech, this one will be used.'),
+    '#description' => t('If no other module specifies a different vocabulary, this one will be used.'),
     '#type' => 'select',
     '#options' => $select_voc,
     '#required' => TRUE,
@@ -222,7 +222,7 @@ function yahoo_terms_perm() {
 function yahoo_terms_link($type, $node = NULL, $teaser = FALSE) {
   if ($type == 'node' && $node != NULL) {
     if(user_access(YAHOO_TERMS_USE) && user_access("administer nodes") && variable_get('yahoo_terms_enable_link', FALSE)) {
-      $links[] = l(t('Extract the terms with Yahoo Term Extractor'), 'yahoo_terms/'. $node->nid);
+      $links[] = l(t('extract terms'), 'yahoo_terms/'. $node->nid);
     }
   }
   return $links;
