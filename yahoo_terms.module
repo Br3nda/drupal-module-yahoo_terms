@@ -192,8 +192,8 @@ function yahoo_terms_settings() {
   );
   $form['yahoo_terms_enable_runtime'] = array(
     '#type' => 'radios',
-    '#options' => array(YAHOO_TERMS_ON_NODE_CREATION => t("Extract terms everytime node is created"),
-                        YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE => t("Extract terms everytime node is created or updated"),
+    '#options' => array(YAHOO_TERMS_ON_NODE_CREATION => t("Extract terms every time node is created"),
+                        YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE => t("Extract terms every time node is created or updated"),
                         YAHOO_TERMS_ONLY_MANUALLY => t("Only extract terms manually")),
     '#default_value' => variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY),
   );
