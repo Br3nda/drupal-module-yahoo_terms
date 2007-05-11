@@ -108,7 +108,7 @@ function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid,
   $terms = yahoo_terms_text_get_keywords($text, $query, $limit, $blacklist);
   $tids = _yahoo_terms_create_vocabulary_items($terms, $vid, $static);
   $node->taxonomy = array_merge($node->taxonomy, $tids);
-  taxonomy_node_save($node->nid, $tids);
+  taxonomy_node_save($node->nid, $node->taxonomy);
 }
 
 /**
