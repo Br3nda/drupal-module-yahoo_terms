@@ -353,7 +353,7 @@ function yahoo_terms_batch() {
   $form['yahoo_terms_batch'] = array(
       '#type' => 'fieldset',
       '#title' => t('Batch tag a content type'),
-      '#description' => t('Tag all the nodes with this content type immediately. If you want to achieve it automatically, please check out the specific content type\'s settings page'),
+      '#description' => t('Tag all nodes of given content type manually. For permanent settings, go to the content type\'s settings page.'),
       '#collapsible' => TRUE,
       '#collapsed' => FALSE
   );
@@ -403,7 +403,7 @@ function yahoo_terms_batch_submit($form_id, $form_values) {
     }
   }
   $timer = timer_read("yahoo_terms_batch");
-  drupal_set_message(t("%number node(s) are processed in %sec second", array("%number" => $num_of_processed, "%sec" => ($timer / 1000))));
+  drupal_set_message(t("%number node(s) processed in %sec s", array("%number" => $num_of_processed, "%sec" => ($timer / 1000))));
 }
 
 /**
