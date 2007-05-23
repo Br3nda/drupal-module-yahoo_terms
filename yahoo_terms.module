@@ -190,7 +190,7 @@ function yahoo_terms_settings() {
   );
   $form['yahoo_terms_enable_link'] = array(
     '#title' => t('Show manual term extraction link on nodes'),
-    '#description' => t('If checked, a "extract terms" link will show every node.'),
+    '#description' => t('If checked, a "extract terms" link will show on every node.'),
     '#type' => 'checkbox',
     '#default_value' => variable_get('yahoo_terms_enable_link', FALSE),
   );
