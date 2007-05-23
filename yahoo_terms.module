@@ -214,7 +214,7 @@ function yahoo_terms_perm() {
 function yahoo_terms_link($type, $node = NULL, $teaser = FALSE) {
   if ($type == 'node' && $node != NULL) {
     if(user_access(YAHOO_TERMS_USE) && user_access("administer nodes") && variable_get('yahoo_terms_enable_link', FALSE)) {
-      $links["yahoo_terms_extract"] = array('title' => t('Extract the terms with Yahoo Term Extractor'), 'href' => 'yahoo_terms/'. $node->nid);
+      $links["yahoo_terms_extract"] = array('title' => t('extract terms'), 'href' => 'yahoo_terms/'. $node->nid);
     }
   }
   return $links;
