@@ -23,7 +23,18 @@ define('YAHOO_APP_ID', variable_get('yahoo_terms_appid', ''));
  *
  */
 define('YAHOO_TERMS_USE', "yahoo_terms_usage");
-
+/**
+ * Do not extract terms via nodeapi
+ */
+define('YAHOO_TERMS_ONLY_MANUALLY', 0);
+/**
+ * Extract terms on nodeapi - creation op
+ */
+define('YAHOO_TERMS_ON_NODE_CREATION', 1);
+/**
+ * Extract terms on nodeapi - creation and update op
+ */
+define('YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE', 2);
 /**
  * Parse the given text with the term extractor service.
  *
@@ -97,7 +108,7 @@ function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid,
   $terms = yahoo_terms_text_get_keywords($text, $query, $limit, $blacklist);
   $tids = _yahoo_terms_create_vocabulary_items($terms, $vid, $static);
   $node->taxonomy = array_merge($node->taxonomy, $tids);
-  taxonomy_node_save($node->nid, $tids);
+  taxonomy_node_save($node->nid, $node->taxonomy);
 }
 
 /**
@@ -167,10 +178,16 @@ function yahoo_terms_admin_settings() {
   );
   $form['yahoo_terms_enable_link'] = array(
     '#title' => t('Show manual term extraction link on nodes'),
-    '#description' => t('If checked, a "extract terms" link will show on every node.'),
+    '#description' => t('If checked, an "extract terms" link will show on every node.'),
     '#type' => 'checkbox',
-    '#required' => TRUE,
     '#default_value' => variable_get('yahoo_terms_enable_link', FALSE),
+  );
+  $form['yahoo_terms_enable_runtime'] = array(
+    '#type' => 'radios',
+    '#options' => array(YAHOO_TERMS_ON_NODE_CREATION => t("Extract terms everytime node is created"),
+                        YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE => t("Extract terms everytime node is created or updated"),
+                        YAHOO_TERMS_ONLY_MANUALLY => t("Only extract terms manually")),
+    '#default_value' => variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY),
   );
   $select_voc = _yahoo_terms_vocab_select();
   $form['yahoo_terms_vocab'] = array(
@@ -197,7 +214,7 @@ function yahoo_terms_perm() {
 function yahoo_terms_link($type, $node = NULL, $teaser = FALSE) {
   if ($type == 'node' && $node != NULL) {
     if(user_access(YAHOO_TERMS_USE) && user_access("administer nodes") && variable_get('yahoo_terms_enable_link', FALSE)) {
-      $links["yahoo_terms_extract"] = array('title' => t('extract terms'), 'href' => 'yahoo_terms/'. $node->nid);
+      $links["yahoo_terms_extract"] = array('title' => t('Extract the terms with Yahoo Term Extractor'), 'href' => 'yahoo_terms/'. $node->nid);
     }
   }
   return $links;
@@ -242,16 +259,39 @@ function _yahoo_terms_process_node() {
 /**
  * Implements of hook_nodeapi()
  */
-function yahoo_terms_nodeapi(&$node, $op) {
+function yahoo_terms_nodeapi(&$node, $op, $vid = NULL, $query = NULL) {
   switch ($op) {
     case 'terms_tagging':
-      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
+      $vid = ($vid === NULL) ? variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE) : $vid;
       $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
       if (is_numeric($vid)) {
-        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+        $query = ($query === NULL) ? "" : $query;
+        yahoo_terms_node_assign_keywords($node, $query, array(), $vid);
       }
       else {
         return;
+      }
+      break;
+    case 'insert':
+      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
+      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
+      if (is_numeric($vid) && ($automatic == YAHOO_TERMS_ON_NODE_CREATION || $automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE)) {
+        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+      }
+      break;
+    case 'update':
+      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
+      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
+      if (is_numeric($vid) && $automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE) {
+        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+      }
+      break;
+    case 'prepare':
+      $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
+      if ($automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE && isset($node->nid)) {
+        $node->taxonomy = array();
       }
       break;
   }
@@ -283,11 +323,15 @@ function yahoo_terms_form_alter($form_id, &$form) {
       '#default_value' => variable_get('yahoo_terms_vocab_for_'. $node_type, ''),
     );
     $form['workflow']['yahoo_terms']['yahoo_terms_process_existing'] = array(
-      '#title' => t('Process existing content not tagged yet'),
-      '#description' => t('This function is done in cron-time, so a working and regularly called cron is required.'),
+      '#title' => t('Process existing content of this type'),
+      '#description' => t('This function is done on cron time, so a working and regularly called cron is
+                           required. All previously assigned terms are dropped and replaced with the extracted ones.
+                           After cron run this option will be unchecked, so if you check it, it will
+                           be processed once.'),
       '#type' => 'checkbox',
+      '#return_value' => TRUE,
       '#required' => FALSE,
-      '#default_value' => variable_get('yahoo_terms_process_existing_'. $node_type, ''),
+      '#default_value' => variable_get('yahoo_terms_process_existing_'. $node_type, FALSE),
     ); 
   }
 }
@@ -299,7 +343,7 @@ function yahoo_terms_batch() {
   $form['yahoo_terms_batch'] = array(
       '#type' => 'fieldset',
       '#title' => t('Batch tag a content type'),
-      '#description' => t('Tag all nodes of given content type manually. For permanent settings, go to the content type\'s settings page.'),
+      '#description' => t('Tag all the nodes with this content type immediately. If you want to achieve it automatically, please check out the specific content type\'s settings page'),
       '#collapsible' => TRUE,
       '#collapsed' => FALSE
   );
@@ -371,4 +415,24 @@ function _yahoo_terms_vocab_select() {
       $select_voc[0] = 'No vocabularies found'; 
     }
     return $select_voc;
+}
+
+/**
+ * Batch processing whole content-types at cron time according to content-type's settings page
+ *
+ */
+function yahoo_terms_cron() {
+  $types = node_get_types();
+  foreach($types as $type => $type_object) {
+    if (variable_get('yahoo_terms_process_existing_'. $type, FALSE) == TRUE) {
+      variable_set('yahoo_terms_process_existing_'. $type, FALSE);
+      $result = db_query("SELECT nid FROM {node} WHERE type = '%s'", $type);
+      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
+      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      while ($node = db_fetch_array($result)) {
+        $node = node_load($node['nid']);
+        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+      }
+    }
+  }
 }
