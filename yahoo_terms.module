@@ -115,8 +115,20 @@ function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid,
   $limit = ($limit === FALSE) ? variable_get('yahoo_terms_taxonomy_limit', -1) : $limit;
   $terms = yahoo_terms_text_get_keywords($text, $query, $limit, $blacklist);
   $tids = _yahoo_terms_create_vocabulary_items($terms, $vid, $static);
-  $node->taxonomy = array_merge($node->taxonomy, $tids);
-  taxonomy_node_save($node->nid, $node->taxonomy);
+  $tids_in_node = array_keys($node->taxonomy);
+  $tids_fetched = array_keys($tids);
+  // Union of these arrays
+  $tids_now = $tids_in_node + $tids_fetched;
+  taxonomy_node_save($node->nid, $tids_now);
+}
+
+/**
+ * Determine the vocab for the given node
+ */
+function _yahoo_terms_which_vocab($type) {
+  $vid = variable_get('yahoo_terms_vocab_for_'. $type, FALSE);
+  $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+  return $vid;
 }
 
 /**
@@ -139,28 +151,29 @@ function _yahoo_terms_create_vocabulary_items($keywords, $vid, $static) {
   // todo: pull blacklist from user input
   $blacklist = array('nbsp', 'quot');
   foreach ($keywords as $term) {
-    if (!in_array($term, $blacklist)) {
-      $curr_term = taxonomy_get_term_by_name($term);
-      if (count($curr_term) != 0) {
-        $curr_term = $curr_term[0];
+
+    $curr_terms = taxonomy_get_term_by_name($term);
+    if (count($curr_terms) != 0) {
+      foreach ($curr_terms as $curr_term) {
         if ($curr_term->vid == $vid) {
-          $tids[] = $curr_term;
-        } else if ($static == FALSE) {
-          $new_term['name'] = $term;
-          $new_term['vid'] = $vid;
-          taxonomy_save_term($new_term);
-          $tids[] = taxonomy_get_term($new_term['tid']);
-          unset($new_term);
+          $tids[$curr_term->tid] = $curr_term;
         }
       }
-      else {
-        if ($static == FALSE) {
-          $new_term['name'] = $term;
-          $new_term['vid'] = $vid;
-          taxonomy_save_term($new_term);
-          $tids[] = taxonomy_get_term($new_term['tid']);
-          unset($new_term);
-        }
+      if (count($tids) == 0 and $static == FALSE) {
+        $new_term['name'] = $term;
+        $new_term['vid'] = $vid;
+        taxonomy_save_term($new_term);
+        $tids[$new_term['tid']] = taxonomy_get_term($new_term['tid']);
+        unset($new_term);
+      }
+    }
+    else {
+      if ($static == FALSE) {
+        $new_term['name'] = $term;
+        $new_term['vid'] = $vid;
+        taxonomy_save_term($new_term);
+        $tids[$new_term['tid']] = taxonomy_get_term($new_term['tid']);
+        unset($new_term);
       }
     }
   }
@@ -224,9 +237,13 @@ function yahoo_terms_perm() {
  * Implements hook_link()
  */
 function yahoo_terms_link($type, $node = NULL, $teaser = FALSE) {
-  if ($type == 'node' && $node != NULL) {
-    if(user_access(YAHOO_TERMS_USE) && user_access("administer nodes") && variable_get('yahoo_terms_enable_link', FALSE)) {
-      $links[] = l(t('extract terms'), 'yahoo_terms/'. $node->nid);
+  $vid = _yahoo_terms_which_vocab($node->type);
+  $count = db_num_rows(db_query("SELECT vid FROM {vocabulary_node_types} WHERE vid = %d AND type = '%s'", $vid, $node->type));
+  if ($count != 0) {
+    if ($type == 'node' && $node != NULL) {
+      if(user_access(YAHOO_TERMS_USE) && user_access("administer nodes") && variable_get('yahoo_terms_enable_link', FALSE)) {
+        $links[] = l(t('extract terms'), 'yahoo_terms/'. $node->nid);
+      }
     }
   }
   return $links;
@@ -272,8 +289,7 @@ function _yahoo_terms_process_node() {
 function yahoo_terms_nodeapi(&$node, $op, $vid = NULL, $query = NULL) {
   switch ($op) {
     case 'terms_tagging':
-      $vid = ($vid === NULL) ? variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE) : $vid;
-      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      $vid = _yahoo_terms_which_vocab($node->type);
       if (is_numeric($vid)) {
         $query = ($query === NULL) ? "" : $query;
         yahoo_terms_node_assign_keywords($node, $query, array(), $vid);
@@ -283,16 +299,14 @@ function yahoo_terms_nodeapi(&$node, $op, $vid = NULL, $query = NULL) {
       }
       break;
     case 'insert':
-      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
-      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      $vid = _yahoo_terms_which_vocab($node->type);
       $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
       if (is_numeric($vid) && ($automatic == YAHOO_TERMS_ON_NODE_CREATION || $automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE)) {
         yahoo_terms_node_assign_keywords($node, "", array(), $vid);
       }
       break;
     case 'update':
-      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
-      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      $vid = _yahoo_terms_which_vocab($node->type);
       $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
       if (is_numeric($vid) && $automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE) {
         yahoo_terms_node_assign_keywords($node, "", array(), $vid);
@@ -381,6 +395,12 @@ function yahoo_terms_batch() {
     '#type' => 'checkbox',
     '#default_value' => FALSE
   );
+  $form['yahoo_terms_batch']['limit_number'] = array(
+    '#title' => t('Only process n nodes in one turn'),
+    '#type' => 'select',
+    '#options' => array('0' => 'No limit', '50' => '50', '100' => '100', '500' => '500', '1000' => '1000'),
+    '#default_value' => 0
+  );
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => 'Start tagging'
@@ -394,7 +414,24 @@ function yahoo_terms_batch() {
 function yahoo_terms_batch_submit($form_id, $form_values) {
   timer_start("yahoo_terms_batch");
   $num_of_processed = 0;
-  $result = db_query("SELECT nid FROM {node} WHERE type = '%s'", $form_values['type']);
+  $limit_number = $form_values['limit_number'];
+  if ($limit_number == 0) {
+    $result = db_query("SELECT nid FROM {node} WHERE type = '%s'",
+                       $form_values['type']);
+  }
+  else {
+    if (!$form_values['rewrite']) {
+      $result = db_query("SELECT n.nid FROM {node} n LEFT JOIN {term_node} t ON t.nid=n.nid WHERE t.nid IS NULL and type = '%s' ORDER BY created DESC LIMIT %d",
+                          $form_values['type'], $form_values['limit_number']
+      );
+    }
+    else {
+      $result = db_query("SELECT nid FROM {node}
+                          WHERE type = '%s' LIMIT %d",
+                          $form_values['type'], $form_values['limit_number']
+      );
+    }
+  }
   while ($node = db_fetch_array($result)) {
     $node = node_load($node['nid']);
     if ( (!isset($node->taxonomy) || count($node->taxonomy) == 0) || $form_values['rewrite']) {
@@ -432,8 +469,7 @@ function yahoo_terms_cron() {
     if (variable_get('yahoo_terms_process_existing_'. $type, FALSE) == TRUE) {
       variable_set('yahoo_terms_process_existing_'. $type, FALSE);
       $result = db_query("SELECT nid FROM {node} WHERE type = '%s'", $type);
-      $vid = variable_get('yahoo_terms_vocab_for_'. $node->type, FALSE);
-      $vid = ($vid === FALSE) ? variable_get('yahoo_terms_vocab', FALSE) : $vid;  // Fall back to default if needed
+      $vid = _yahoo_terms_which_vocab($type);
       while ($node = db_fetch_array($result)) {
         $node = node_load($node['nid']);
         yahoo_terms_node_assign_keywords($node, "", array(), $vid);
