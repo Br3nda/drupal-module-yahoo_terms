@@ -140,29 +140,31 @@ function _yahoo_terms_create_vocabulary_items($keywords, $vid, $static) {
     return FALSE;
   }
   $tids = array();
-  foreach ($keywords as $term) {
-    $curr_terms = taxonomy_get_term_by_name($term);
-    if (count($curr_terms) != 0) {
-      foreach ($curr_terms as $curr_term) {
-        if ($curr_term->vid == $vid) {
-          $tids[$curr_term->tid] = $curr_term;
+  if (is_array($keywords)) {
+    foreach ($keywords as $term) {
+      $curr_terms = taxonomy_get_term_by_name($term);
+      if (count($curr_terms) != 0) {
+        foreach ($curr_terms as $curr_term) {
+          if ($curr_term->vid == $vid) {
+            $tids[$curr_term->tid] = $curr_term;
+          }
+        }
+        if (count($tids) == 0 and $static == FALSE) {
+          $new_term['name'] = $term;
+          $new_term['vid'] = $vid;
+          taxonomy_save_term($new_term);
+          $tids[$new_term['tid']] = taxonomy_get_term($new_term['tid']);
+          unset($new_term);
         }
       }
-      if (count($tids) == 0 and $static == FALSE) {
-        $new_term['name'] = $term;
-        $new_term['vid'] = $vid;
-        taxonomy_save_term($new_term);
-        $tids[$new_term['tid']] = taxonomy_get_term($new_term['tid']);
-        unset($new_term);
-      }
-    }
-    else {
-      if ($static == FALSE) {
-        $new_term['name'] = $term;
-        $new_term['vid'] = $vid;
-        taxonomy_save_term($new_term);
-        $tids[$new_term['tid']] = taxonomy_get_term($new_term['tid']);
-        unset($new_term);
+      else {
+        if ($static == FALSE) {
+          $new_term['name'] = $term;
+          $new_term['vid'] = $vid;
+          taxonomy_save_term($new_term);
+          $tids[$new_term['tid']] = taxonomy_get_term($new_term['tid']);
+          unset($new_term);
+        }
       }
     }
   }
@@ -231,7 +233,7 @@ function yahoo_terms_link($type, $node = NULL, $teaser = FALSE) {
   if ($count != 0) {
     if ($type == 'node' && $node != NULL) {
       if (user_access(YAHOO_TERMS_USE) && user_access("administer nodes") && variable_get('yahoo_terms_enable_link', FALSE)) {
-        $links["yahoo_terms_extract"] = array('title' => t('Extract the terms with Yahoo Term Extractor'), 'href' => 'yahoo_terms/'. $node->nid);
+        $links["yahoo_terms_extract"] = array('title' => t('Extract terms'), 'href' => 'yahoo_terms/'. $node->nid);
       }
     }
   }
