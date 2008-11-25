@@ -1,3 +1,5 @@
-; $Id: yahoo_terms.info,v 1.2 2008/11/25 08:55:37 taniwha Exp $
+; $Id: yahoo_terms.info,v 1.3 2008/11/25 08:59:27 taniwha Exp $
 name = "Yahoo Terms Extractor"
 description = "Extract terms from English language texts and nodes and save into the taxonomy hierarchy"
+core = 6.x
+
