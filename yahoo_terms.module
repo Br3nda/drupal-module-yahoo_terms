@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.module,v 1.3.4.4 2010/06/07 09:13:22 taniwha Exp $
+// $Id: yahoo_terms.module,v 1.3.4.5 2010/06/07 09:14:24 taniwha Exp $
 /**
  * @file
  * Provides an interface to other modules to use Yahoo Term Extractor service
@@ -223,9 +223,10 @@ function yahoo_terms_admin_settings() {
   );
   $form['yahoo_terms_enable_runtime'] = array(
     '#type' => 'radios',
-    '#options' => array(YAHOO_TERMS_ON_NODE_CREATION => t("Extract terms everytime node is created"),
-                        YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE => t("Extract terms everytime node is created or updated"),
-                        YAHOO_TERMS_ONLY_MANUALLY => t("Only extract terms manually")),
+    '#options' => array(
+      YAHOO_TERMS_ON_NODE_CREATION => t("Extract terms everytime node is created"),
+      YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE => t("Extract terms everytime node is created or updated"),
+      YAHOO_TERMS_ONLY_MANUALLY => t("Only extract terms manually")),
     '#default_value' => variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY),
   );
   $select_voc = _yahoo_terms_vocab_select();
