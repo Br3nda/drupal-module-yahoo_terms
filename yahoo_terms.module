@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.module,v 1.3.4.6 2010/06/07 09:14:43 taniwha Exp $
+// $Id: yahoo_terms.module,v 1.3.4.7 2010/06/07 09:20:03 taniwha Exp $
 /**
  * @file
  * Provides an interface to other modules to use Yahoo Term Extractor service
@@ -294,6 +294,11 @@ function yahoo_terms_menu() {
   return $items;
 }
 
+function yahoo_terms_node_batch($nid) {
+  return _yahoo_terms_process_node($nid);
+}
+
+
 /**
  * Do the term assigning to the given node in the argument
  *
@@ -403,18 +408,22 @@ function yahoo_terms_batch() {
       '#collapsible' => TRUE,
       '#collapsed' => FALSE
   );
+
   $types = node_get_types();
   foreach ($types as $key => $type) {
     $select[$key] = $key;
   }
   unset($types);
+  
   $form['yahoo_terms_batch']['type'] = array(
       '#title' => t('Content type'),
       '#type' => 'select',
       '#options' => $select,
       '#required' => TRUE,
   );
+                                              
   $select_voc = _yahoo_terms_vocab_select();
+    
   $form['yahoo_terms_batch']['vid'] = array(
     '#title' => t('Vocabulary where the terms will be created'),
     '#type' => 'select',
@@ -422,6 +431,7 @@ function yahoo_terms_batch() {
     '#required' => TRUE,
     '#default_value' => variable_get('yahoo_terms_vocab', ''),
   );
+
   $form['yahoo_terms_batch']['rewrite'] = array(
     '#title' => t('Re-tag already tagged nodes'),
     '#type' => 'checkbox',
@@ -430,8 +440,10 @@ function yahoo_terms_batch() {
   $form['yahoo_terms_batch']['limit_number'] = array(
     '#title' => t('Only process n nodes in one turn'),
     '#type' => 'select',
-    '#options' => array('0' => 'No limit', '50' => '50', '100' => '100', '500' => '500', '1000' => '1000'),
-    '#default_value' => 0
+    '#options' => array(
+      '0' => 'No limit', '50' => '50', '100' => '100', '500' => '500', '1000' => '1000'
+      ),
+      '#default_value' => 0
   );
   $form['submit'] = array(
     '#type' => 'submit',
