@@ -126,10 +126,16 @@ function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid,
   $limit = ($limit === FALSE) ? variable_get('yahoo_terms_taxonomy_limit', -1) : $limit;
   $terms = yahoo_terms_text_get_keywords($text, $query, $limit, $blacklist);
   $tids = _yahoo_terms_create_vocabulary_items($terms, $vid, $static);
-  $tids_in_node = array_keys($node->taxonomy);
   $tids_fetched = array_keys($tids);
-  // Union of these arrays
-  $tids_now = $tids_in_node + $tids_fetched;
+  if ($node->taxonomy) {
+    $tids_in_node = array_keys($node->taxonomy);
+    // Union of these arrays
+    $tids_now = $tids_in_node + $tids_fetched;
+  }
+  else {
+    // Union of these arrays
+    $tids_now = $tids_fetched;
+  }
   taxonomy_node_save($node->nid, $tids_now);
 }
 
