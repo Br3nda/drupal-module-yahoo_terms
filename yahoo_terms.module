@@ -311,7 +311,12 @@ function yahoo_terms_nodeapi(&$node, $op, $vid = NULL, $query = NULL) {
     case 'prepare':
       $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
       if ($automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE && isset($node->nid)) {
-        $node->taxonomy = array();
+        $vid = _yahoo_terms_which_vocab($node->type);
+        foreach ($node->taxonomy as $tid => $term) {
+          if ($term->vid == $vid) {
+            unset($node->taxonomy[$tid]);
+          }
+        }
       }
       break;
   }
