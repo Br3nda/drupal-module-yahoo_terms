@@ -78,6 +78,10 @@ function yahoo_terms_text_get_keywords($text, $query = "", $limit = -1, $blackli
     $result = $result['ResultSet']['Result'];
   }
   $result = array_unique($result);
+  //merge in Global Blacklist
+  $global_blacklist = preg_split('/\r\n?|\n/', variable_get('yahoo_terms_global_blacklist',''));	
+  $blacklist = array_merge($blacklist, $global_blacklist);
+    
   // Drop the blacklist items
   if (count($blacklist) > 0) {
     foreach($result as $id => $term) {
@@ -214,6 +218,14 @@ function yahoo_terms_admin_settings() {
     '#required' => TRUE,
     '#default_value' => variable_get('yahoo_terms_vocab', ''),
   );
+  
+	$form['yahoo_terms_global_blacklist'] = array(
+    '#title' => t('Global Blacklist'),
+    '#description' => t('Keywords that you never want to see returned (one per line)'),
+    '#type' => 'textarea',
+    '#required' => FALSE,
+    '#default_value' => variable_get('yahoo_terms_global_blacklist', ''),
+  );  
   return system_settings_form($form);
 }
 
