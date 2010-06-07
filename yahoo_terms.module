@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.module,v 1.3.4.3 2010/06/07 09:12:27 taniwha Exp $
+// $Id: yahoo_terms.module,v 1.3.4.4 2010/06/07 09:13:22 taniwha Exp $
 /**
  * @file
  * Provides an interface to other modules to use Yahoo Term Extractor service
@@ -132,6 +132,8 @@ function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid,
   }
   drupal_set_message('New tags = ' . implode($terms, ', '));
   $tids = _yahoo_terms_create_vocabulary_items($terms, $vid, $static);
+  if (!is_array($tids)) { return; }
+  $tids_in_node = array_keys($node->taxonomy);
   $tids_fetched = array_keys($tids);
   if ($node->taxonomy) {
     $tids_in_node = array_keys($node->taxonomy);
