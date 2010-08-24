@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.module,v 1.6 2010/08/24 05:01:00 taniwha Exp $
+// $Id: yahoo_terms.module,v 1.7 2010/08/24 05:05:12 taniwha Exp $
 /**
  * @file
  * Provides an interface to other modules to use Yahoo Term Extractor service
@@ -284,12 +284,13 @@ function yahoo_terms_perm() {
 function yahoo_terms_menu() {
   
   $items = array();
-  $items['yahoo_terms'] = array(
-    'title' => t('Extraction...'),
+  $items['node/%/yahoo_terms'] = array(
+    'title' => t('Add Yahoo Terms'),
     'page callback' => '_yahoo_terms_process_node',
+    'page arguments' => array(1),
     'access callback' => 'user_access',
     'access arguments' => array('YAHOO_TERMS_USE'),
-    'type' => MENU_CALLBACK
+    'type' => MENU_LOCAL_TASK,
     );
   $items['admin/settings/yahoo_terms'] = array(
     'title' => t('Yahoo Terms'),
