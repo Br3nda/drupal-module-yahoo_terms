@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.module,v 1.4 2010/06/07 23:21:29 taniwha Exp $
+// $Id: yahoo_terms.module,v 1.5 2010/08/24 05:00:30 taniwha Exp $
 /**
  * @file
  * Provides an interface to other modules to use Yahoo Term Extractor service
@@ -132,6 +132,10 @@ function _yahoo_terms_which_vocab($type) {
  */
 function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid, $static = FALSE) {
   $text = ($node->body != '') ? $node->body : $node->title;
+  if (empty($text)) {
+    drupal_set_message("Text is empty");
+    return;
+  }
   $limit = variable_get('yahoo_terms_taxonomy_limit_for_'. $node->type, FALSE);
   $limit = ($limit === FALSE) ? variable_get('yahoo_terms_taxonomy_limit', -1) : $limit;
   $terms = yahoo_terms_text_get_keywords($text, $query, $limit, $blacklist);
@@ -294,7 +298,7 @@ function yahoo_terms_menu() {
     'access callback' => 'user_access',
     'access arguments' => array('YAHOO_TERMS_USE')
     );
-  $items['yahoo_terms/batch'] = array(
+  $items['admin/content/yahoo_terms_batch'] = array(
     'title' => t('Yahoo Terms batch processing'),
     'page callback' => 'yahoo_terms_batch_page',
     'access callback' =>  'user_access',
