@@ -1,5 +1,4 @@
 <?php
-// $Id: yahoo_terms.module,v 1.7 2010/08/24 05:05:12 taniwha Exp $
 /**
  * @file
  * Provides an interface to other modules to use Yahoo Term Extractor service
