@@ -287,7 +287,6 @@ function yahoo_terms_menu() {
     'title' => t('Add Yahoo Terms'),
     'page callback' => '_yahoo_terms_process_node',
     'page arguments' => array(1),
-    'access callback' => 'user_access',
     'access arguments' => array('YAHOO_TERMS_USE'),
     'type' => MENU_LOCAL_TASK,
     );
