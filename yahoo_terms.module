@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.module,v 1.3.4.10 2010/06/07 23:15:03 taniwha Exp $
+// $Id: yahoo_terms.module,v 1.3.4.11 2010/09/15 22:39:10 taniwha Exp $
 /**
  * @file
  * Provides an interface to other modules to use Yahoo Term Extractor service
@@ -132,6 +132,10 @@ function _yahoo_terms_which_vocab($type) {
  */
 function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid, $static = FALSE) {
   $text = ($node->body != '') ? $node->body : $node->title;
+  if (empty($text)) {
+    drupal_set_message("Text is empty");
+    return;
+  }
   $limit = variable_get('yahoo_terms_taxonomy_limit_for_'. $node->type, FALSE);
   $limit = ($limit === FALSE) ? variable_get('yahoo_terms_taxonomy_limit', -1) : $limit;
   $terms = yahoo_terms_text_get_keywords($text, $query, $limit, $blacklist);
@@ -280,12 +284,13 @@ function yahoo_terms_perm() {
 function yahoo_terms_menu() {
   
   $items = array();
-  $items['yahoo_terms'] = array(
-    'title' => t('Extraction...'),
+  $items['node/%/yahoo_terms'] = array(
+    'title' => t('Add Yahoo Terms'),
     'page callback' => '_yahoo_terms_process_node',
+    'page arguments' => array(1),
     'access callback' => 'user_access',
     'access arguments' => array('YAHOO_TERMS_USE'),
-    'type' => MENU_CALLBACK
+    'type' => MENU_LOCAL_TASK,
     );
   $items['admin/settings/yahoo_terms'] = array(
     'title' => t('Yahoo Terms'),
@@ -294,7 +299,7 @@ function yahoo_terms_menu() {
     'access callback' => 'user_access',
     'access arguments' => array('YAHOO_TERMS_USE')
     );
-  $items['yahoo_terms/batch'] = array(
+  $items['admin/content/yahoo_terms_batch'] = array(
     'title' => t('Yahoo Terms batch processing'),
     'page callback' => 'yahoo_terms_batch_page',
     'access callback' =>  'user_access',
@@ -457,7 +462,7 @@ function yahoo_terms_batch() {
     '#options' => array(
       '0' => 'No limit', '50' => '50', '100' => '100', '500' => '500', '1000' => '1000'
       ),
-      '#default_value' => 0
+      '#default_value' => 50
   );
   $form['submit'] = array(
     '#type' => 'submit',
