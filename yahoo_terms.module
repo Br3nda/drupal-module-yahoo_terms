@@ -300,8 +300,7 @@ function yahoo_terms_menu() {
   $items['admin/content/yahoo_terms_batch'] = array(
     'title' => t('Yahoo Terms batch processing'),
     'page callback' => 'yahoo_terms_batch_page',
-    'access callback' =>  'user_access',
-    'access arguments' => array('YAHOO_TERMS_USE') // TODO: The D5 version had 'administer nodes' as a permission.
+    'access arguments' => array('administer nodes') // TODO: The D5 version had 'administer nodes' as a permission.
     );
   return $items;
 }
