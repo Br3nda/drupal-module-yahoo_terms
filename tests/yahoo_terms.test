@@ -1,0 +1,61 @@
+<?php
+// $Id: yahoo_terms.test,v 1.2 2010/09/16 01:14:26 taniwha Exp $
+
+/**
+ * @file
+ * Unit Tests for yahoo_terms module
+ * http://drupal.org/node/265762
+ */
+
+class YahooTermsTestCase extends DrupalWebTestCase {
+
+  /**
+   * User with rights to post SimpleTest Example content.
+   */
+  protected $privileged_user;
+
+  /**
+   * getInfo() returns properties that are displayed in the test selection form.
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Yahoo Terms',
+      'description' => 'tests for the Yahoo Terms',
+      'group' => 'Yahoo Terms',
+    );
+  }
+
+  /**
+   * setUp() performs any pre-requisite tasks that need to happen. 
+   */
+  public function setUp() {
+    // Enable any modules required for the test.
+    parent::setUp('yahoo_terms');
+
+    // Create and log in our privileged user.
+    $this->privileged_user = $this->drupalCreateUser( array('yahoo_terms_usage'));
+    $this->drupalLogin($this->privileged_user);
+  }
+
+  /**
+   * Test saving your settings
+   */
+  public function testSavingsettings() {
+
+    $this->drupalGet('admin/settings/yahoo_terms');
+    $edit = array(
+      'yahoo_terms_appid' => 'Yahoo Terms module unittests',
+      'yahoo_terms_taxonomy_limit' => '-1',
+    );
+    $this->drupalPost('admin/settings/yahoo_terms', $edit);
+    $this->assertResponse(200);
+
+  
+    $this->drupalGet('admin/content/yahoo_terms');
+    $this->assertResponse(200);
+
+  }
+
+
+
+}
