@@ -287,7 +287,7 @@ function yahoo_terms_menu() {
     'title' => t('Add Yahoo Terms'),
     'page callback' => '_yahoo_terms_process_node',
     'page arguments' => array(1),
-    'access arguments' => array('YAHOO_TERMS_USE'),
+    'access arguments' => array(YAHOO_TERMS_USE),
     'type' => MENU_LOCAL_TASK,
     );
   $items['admin/settings/yahoo_terms'] = array(
@@ -295,12 +295,12 @@ function yahoo_terms_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('yahoo_terms_admin_settings'),
     'access callback' => 'user_access',
-    'access arguments' => array('YAHOO_TERMS_USE')
+    'access arguments' => array(YAHOO_TERMS_USE)
     );
   $items['admin/content/yahoo_terms_batch'] = array(
     'title' => t('Yahoo Terms batch processing'),
     'page callback' => 'yahoo_terms_batch_page',
-    'access arguments' => array('administer nodes') // TODO: The D5 version had 'administer nodes' as a permission.
+    'access arguments' => array(YAHOO_TERMS_USE) // TODO: The D5 version had 'administer nodes' as a permission.
     );
   return $items;
 }
