@@ -258,7 +258,7 @@ function yahoo_terms_admin_settings() {
 /**
  * Implements hook_perm()
  */
-function yahoo_terms_perm() {
+function yahoo_terms_permission() {
     return array(YAHOO_TERMS_USE);
 }
 
