@@ -23,10 +23,12 @@
  * Where the service URL is
  */
 define('EXTRACT_TERMS_URL', 'http://api.search.yahoo.com/ContentAnalysisService/V1/termExtraction');
+
 /**
  * Each application has a unique ID from Yahoo
  */
 define('YAHOO_APP_ID', variable_get('yahoo_terms_appid', ''));
+
 /**
  * Permission that enable the user to use the yahoo term service
  *
@@ -260,22 +262,6 @@ function yahoo_terms_perm() {
     return array(YAHOO_TERMS_USE);
 }
 
-/**
- * Implements hook_link()
- */
-// function yahoo_terms_link($type, $node = NULL, $teaser = FALSE) {
-//   $vid = _yahoo_terms_which_vocab($node->type);
-//   // $count = 1;
-//   $count = db_result(db_query("SELECT COUNT(vid) FROM {vocabulary_node_types} WHERE vid = %d AND type = '%s')", $vid, $node->type));
-//   if ($count != 0) {
-//     if ($type == 'node' && $node != NULL) {
-//       if (user_access(YAHOO_TERMS_USE) && user_access("administer nodes") && variable_get('yahoo_terms_enable_link', FALSE)) {
-//         $links["yahoo_terms_extract"] = array('title' => t('Extract terms'), 'href' => 'yahoo_terms/'. $node->nid);
-//       }
-//     }
-//   }
-//   return $links;
-// }
 
 /**
  * Implements hook_menu()
@@ -472,7 +458,8 @@ function yahoo_terms_batch_submit_handler($form_id, &$form_state) {
   $rewrite = check_plain($form_state['values']['rewrite']);
   $vocab_id = intval($form_state['values']['vid']);
 
-  $num_nodes = db_result(db_query("SELECT nid FROM {node} WHERE type = '%s'", $type));
+  $num_nodes = db_select('node')
+    ->fdb_result(db_query("SELECT nid FROM {node} WHERE type = '%s'", $type));
   $num_per_run = 10;
 //   for($i=0; $i<=$num_nodes; $i+=$num_per_run) {
     $operations[] = array('yahoo_terms_batch_run', array($type, $rewrite, $vocab_id, $num_per_run));
