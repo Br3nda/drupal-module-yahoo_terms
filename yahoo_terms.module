@@ -78,7 +78,7 @@ function yahoo_terms_text_get_keywords($text, $query = "", $limit = -1, $blackli
   );
 
 
-  drupal_set_message(print_r($response, 1));
+//   drupal_set_message(print_r($response, 1));
 
   if($response->code != 200) {
     drupal_set_message(t("Response from yahoo: %response", array('%response' => $response->data)), 'error');
@@ -276,7 +276,7 @@ function yahoo_terms_menu() {
     'access arguments' => array(YAHOO_TERMS_USE),
     'type' => MENU_LOCAL_TASK,
     );
-  $items['admin/settings/yahoo_terms'] = array(
+  $items['admin/config/yahoo_terms'] = array(
     'title' => 'Yahoo Terms',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('yahoo_terms_admin_settings'),
