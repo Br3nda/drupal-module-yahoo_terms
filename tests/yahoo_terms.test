@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.test,v 1.4 2010/10/07 02:49:26 taniwha Exp $
+// $Id: yahoo_terms.test,v 1.5 2010/10/07 03:00:00 taniwha Exp $
 
 /**
  * @file
@@ -13,6 +13,18 @@ class YahooTermsTestCase extends DrupalWebTestCase {
    * User with rights to post SimpleTest Example content.
    */
   protected $privileged_user;
+
+
+  protected $text_blurb = "
+The Batch API module lets you easily set a batch of callbacks that Drupal will run one at a time, thus avoiding script timeouts for laborious tasks. The batch can be naturally set up in your form submit handler, or can be called in any other function by adding one extra line of code.
+drupal_execute() is not happy
+
+One problem that I ran into along the way was the discovery that drupal_execute() has some compatibility issues with the Batch API. If I tried to use drupal_execute() in my batch callbacks, it would fail. Luckily there was a link to this tip to pause the batch that allowed the batch functions to use drupal_execute() with no complaints.
+
+Batching makes me happy
+
+So, I just got done batch exporting 88 items including 19 super complex content types, 64 views and 4 vocabularies (one containing over 100 terms) and all it only took a few clicks. The Batch API is an amazing time saver. Combining it with some other awesome community tools like Import/Export gives me time to go take a much needed coffee break :)
+";
 
   /**
    * getInfo() returns properties that are displayed in the test selection form.
@@ -30,7 +42,7 @@ class YahooTermsTestCase extends DrupalWebTestCase {
    */
   public function setUp() {
     // Enable any modules required for the test.
-    parent::setUp('yahoo_terms');
+    parent::setUp('yahoo_terms', 'taxonomy');
 
     // Create and log in our privileged user.
     $this->privileged_user = $this->drupalCreateUser( array('yahoo_terms_usage'));
@@ -58,18 +70,46 @@ class YahooTermsTestCase extends DrupalWebTestCase {
 
   
     $this->drupalGet('admin/settings/yahoo_terms');
-    $this->assertText('Yahoo Terms module unittests');
+    $this->assertRaw('Yahoo Terms module unittests');
     $this->assertResponse(200);
     $this->drupalLogout();
 
+
+    
+  }
+  /**
+   * Test of making a node and auto tagging it.
+   */
+  function testCreateNodeAndTag() {
     $settings = array(
       'type' => 'sttory', // This replaces the default type
       'title' => $this->randomName(), // This appends a new field.
-      'body' => 'HELLO WORD',
+      'body' => 'HELLO WORD ', $this->text_blurb,
     );
     $node = $this->drupalCreateNode($settings);
-    
+
+    $this->drupalGet('node/'. $node->nid);
+    $this->assertText('HELLO WORD');
+    $this->assetNoRaw('Add Yahoo Terms');
+
+    $this->drupalLogin($this->priviledged_user);
+
+    $this->drupalGet('node/'. $node->nid);
+    $this->assetText('HELLO WORLD');
+    $this->clickLink('Add Yahoo Terms');
+
+    $this->assertText('New tags = ');
+    $this->assertText('operations,');
+    $this->assertText('batch queue,');
+    $this->assertText('code,');
+    $this->assertText('laborious tasks,'); 
+    //batch operations, compatibility issues, callback function, callbacks, php function, timeouts, error message, amp, logic, discovery
+
+    $this->drupalLogout();
   }
+
+
+
 
 
 
