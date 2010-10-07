@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.test,v 1.8 2010/10/07 03:33:32 taniwha Exp $
+// $Id: yahoo_terms.test,v 1.9 2010/10/07 03:34:06 taniwha Exp $
 
 /**
  * @file
@@ -79,7 +79,7 @@ So, I just got done batch exporting 88 items including 19 super complex content 
   }
   function testHelpfulHelp() {
     $settings = array(
-      'type' => 'sttory', // This replaces the default type
+      'type' => 'story', // This replaces the default type
       'title' => $this->randomName(), // This appends a new field.
       'body' => 'HELLO WORD ', $this->text_blurb,
     );
@@ -99,7 +99,7 @@ So, I just got done batch exporting 88 items including 19 super complex content 
     $this->testSavingsettings();
 
     $settings = array(
-      'type' => 'sttory', // This replaces the default type
+      'type' => 'story', // This replaces the default type
       'title' => $this->randomName(), // This appends a new field.
       'body' => 'HELLO WORD ', $this->text_blurb,
     );
