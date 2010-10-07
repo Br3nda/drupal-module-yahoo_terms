@@ -321,9 +321,9 @@ function _yahoo_terms_process_node() {
     $node = node_load($nid);
     $vid = _yahoo_terms_which_vocab($node->type);
     if ($vid === FALSE) {
-      return t("Please do the settings of Yahoo Terms module before use.");
+      return t("Please configure the Yahoo Terms module before use.");
     }
-    yahoo_terms_node_assign_keywords($node, $query, array(), $vid);
+    yahoo_terms_node_assign_keywords($node, '', array(), $vid);
   }
   else {
     return t("The given argument is not valid.");
