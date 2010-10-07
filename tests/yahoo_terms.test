@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.test,v 1.5 2010/10/07 03:00:00 taniwha Exp $
+// $Id: yahoo_terms.test,v 1.6 2010/10/07 03:27:41 taniwha Exp $
 
 /**
  * @file
@@ -90,9 +90,9 @@ So, I just got done batch exporting 88 items including 19 super complex content 
 
     $this->drupalGet('node/'. $node->nid);
     $this->assertText('HELLO WORD');
-    $this->assetNoRaw('Add Yahoo Terms');
+    $this->assertNoRaw('Add Yahoo Terms');
 
-    $this->drupalLogin($this->priviledged_user);
+    $this->drupalLogin($this->privileged_user);
 
     $this->drupalGet('node/'. $node->nid);
     $this->assetText('HELLO WORLD');
