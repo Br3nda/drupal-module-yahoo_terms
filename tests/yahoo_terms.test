@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.test,v 1.10 2010/10/07 03:34:49 taniwha Exp $
+// $Id: yahoo_terms.test,v 1.11 2010/10/07 03:36:29 taniwha Exp $
 
 /**
  * @file
@@ -101,12 +101,12 @@ So, I just got done batch exporting 88 items including 19 super complex content 
     $settings = array(
       'type' => 'story', // This replaces the default type
       'title' => $this->randomName(), // This appends a new field.
-      'body' => 'HELLO WOLRD ', $this->text_blurb,
+      'body' => 'HELLO WORLD ', $this->text_blurb,
     );
     $node = $this->drupalCreateNode($settings);
 
     $this->drupalGet('node/'. $node->nid);
-    $this->assertText('HELLO WORD');
+    $this->assertText('HELLO WORLD');
     $this->assertNoRaw('Add Yahoo Terms');
 
     $this->drupalLogin($this->privileged_user);
