@@ -560,7 +560,7 @@ function yahoo_terms_batch_page() {
 function _yahoo_terms_vocab_select() {
   $vocabularies = taxonomy_get_vocabularies();
   $select_voc = array();
-  foreach($vocabularies as $voc) {
+  foreach ($vocabularies as $voc) {
     $select_voc[$voc->vid] = $voc->name;
   }
   if (count($select_voc) < 1) {
@@ -578,9 +578,10 @@ function yahoo_terms_cron() {
   foreach ($types as $type => $type_object) {
     if (variable_get('yahoo_terms_process_existing_'. $type, FALSE) == TRUE) {
       variable_set('yahoo_terms_process_existing_'. $type, FALSE);
-      $result = db_query("SELECT nid FROM {node} WHERE type = '%s'", $type);
+      $nodes = db_select('node')->fields('node', array('nid'))->condition('type', $type)->execute();
+      //("SELECT nid FROM {node} WHERE type = '%s'", $type);
       $vid = _yahoo_terms_which_vocab($type);
-      while ($node = db_fetch_array($result)) {
+      foreach($nodes as $node) {
         $node = node_load($node['nid']);
         yahoo_terms_node_assign_keywords($node, "", array(), $vid);
       }
