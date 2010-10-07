@@ -69,26 +69,23 @@ function yahoo_terms_help($section) {
  * All the terms that returned by the Yahoo Term Extractor except the blacklist. For eg. array("term1", "term2")
  */
 function yahoo_terms_text_get_keywords($text, $query = "", $limit = -1, $blacklist = array()) {
-  if (!function_exists('curl_init')) {
-    drupal_set_message(t('Curl not install'), 'error');
+
+  $response = drupal_http_request(EXTRACT_TERMS_URL .'?appid='. urlencode(YAHOO_APP_ID) . '&query='. urlencode($query) . '&output=php&context=text',
+    array(
+      'method' => 'POST',
+      'timeout' => 20,
+    )
+  );
+
+
+  drupal_set_message(print_r($response, 1));
+
+  if($response->code != 200) {
+    drupal_set_message(t("Response from yahoo: %response", array('%response' => $response->data)), 'error');
     return FALSE;
   }
-  $yahoo_options = array('appid' => YAHOO_APP_ID,
-                         'context' => $text,
-                         'query' => $query,
-                         'output' => 'php');
-  $query_yahooapi = curl_init(EXTRACT_TERMS_URL);
-  curl_setopt($query_yahooapi, CURLOPT_POST, 1);
-  curl_setopt($query_yahooapi, CURLOPT_POSTFIELDS, $yahoo_options);
-  curl_setopt($query_yahooapi, CURLOPT_RETURNTRANSFER, 1);
-  $result = curl_exec($query_yahooapi);
-  if (curl_errno($query_yahooapi) != 0) {
-    return FALSE;
-  }
-  else {
-    curl_close($query_yahooapi);
-  }
-  $result = unserialize($result);
+
+  $result = unserialize($response->data);
   if (!is_array($result['ResultSet']['Result'])) {
     return array();
   }
@@ -576,12 +573,12 @@ function _yahoo_terms_vocab_select() {
 function yahoo_terms_cron() {
   $types = node_get_types();
   foreach ($types as $type => $type_object) {
-    if (variable_get('yahoo_terms_process_existing_'. $type, FALSE) == TRUE) {
-      variable_set('yahoo_terms_process_existing_'. $type, FALSE);
+    if (variable_get('yahoo_terms_process_existing_' . $type, FALSE) == TRUE) {
+      variable_set('yahoo_terms_process_existing_' . $type, FALSE);
       $nodes = db_select('node')->fields('node', array('nid'))->condition('type', $type)->execute();
       //("SELECT nid FROM {node} WHERE type = '%s'", $type);
       $vid = _yahoo_terms_which_vocab($type);
-      foreach($nodes as $node) {
+      foreach ($nodes as $node) {
         $node = node_load($node['nid']);
         yahoo_terms_node_assign_keywords($node, "", array(), $vid);
       }
