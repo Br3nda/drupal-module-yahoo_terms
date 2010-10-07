@@ -261,23 +261,6 @@ function yahoo_terms_perm() {
 }
 
 /**
- * Implements hook_link()
- */
-// function yahoo_terms_link($type, $node = NULL, $teaser = FALSE) {
-//   $vid = _yahoo_terms_which_vocab($node->type);
-//   // $count = 1;
-//   $count = db_result(db_query("SELECT COUNT(vid) FROM {vocabulary_node_types} WHERE vid = %d AND type = '%s')", $vid, $node->type));
-//   if ($count != 0) {
-//     if ($type == 'node' && $node != NULL) {
-//       if (user_access(YAHOO_TERMS_USE) && user_access("administer nodes") && variable_get('yahoo_terms_enable_link', FALSE)) {
-//         $links["yahoo_terms_extract"] = array('title' => t('Extract terms'), 'href' => 'yahoo_terms/'. $node->nid);
-//       }
-//     }
-//   }
-//   return $links;
-// }
-
-/**
  * Implements hook_menu()
  */
 function yahoo_terms_menu() {
