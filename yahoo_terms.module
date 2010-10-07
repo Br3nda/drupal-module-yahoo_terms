@@ -452,14 +452,14 @@ function yahoo_terms_batch() {
  * Batch tagging a specific content type
  */
 function yahoo_terms_batch_submit_handler($form_id, &$form_state) {
-  drupal_set_message(__FUNCTION__);
-
   $type = check_plain($form_state['values']['type']);
   $rewrite = check_plain($form_state['values']['rewrite']);
   $vocab_id = intval($form_state['values']['vid']);
 
   $num_nodes = db_select('node')
-    ->fdb_result(db_query("SELECT nid FROM {node} WHERE type = '%s'", $type));
+    ->condition('type', $type)
+    ->fields(array('nid'))
+    ->fetch();
   $num_per_run = 10;
 //   for($i=0; $i<=$num_nodes; $i+=$num_per_run) {
     $operations[] = array('yahoo_terms_batch_run', array($type, $rewrite, $vocab_id, $num_per_run));
@@ -561,19 +561,14 @@ function yahoo_terms_batch_page() {
  *
  * @return array
  */
-function _yahoo_terms_vocab_select($type = NULL) {
-  if ($type == NULL) {
-    $vocabularies = db_query("SELECT v.vid, v.name FROM {vocabulary} v WHERE module='taxonomy'");
-  }
-  else {
-    $vocabularies = db_query("SELECT v.vid, v.name FROM {vocabulary} v LEFT JOIN {vocabulary_node_types} vt ON v.vid = vt.vid  WHERE module='taxonomy' AND vt.type = '%s'", $type);
-  }
+function _yahoo_terms_vocab_select() {
+  $vocabularies = taxonomy_get_vocabularies();
   $select_voc = array();
-  while ($voc = db_fetch_array($vocabularies)) {
-    $select_voc[$voc['vid']] = $voc['name'];
+  foreach($vocabularies as $voc) {
+    $select_voc[$voc->vid] = $voc->name;
   }
   if (count($select_voc) < 1) {
-    $select_voc[0] = 'No vocabularies found';
+    $select_voc[0] = t('No vocabularies found');
   }
   return $select_voc;
 }
