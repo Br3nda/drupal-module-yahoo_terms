@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.test,v 1.12 2010/10/07 03:37:11 taniwha Exp $
+// $Id: yahoo_terms.test,v 1.13 2010/10/07 04:08:24 taniwha Exp $
 
 /**
  * @file
@@ -87,7 +87,7 @@ So, I just got done batch exporting 88 items including 19 super complex content 
     $this->drupalLogin($this->privileged_user);
     $this->drupalGet('node/'. $node->nid);
     $this->clickLink('Add Yahoo Terms');
-    $this->assertText('Please do the settings of Yahoo Terms module before use.');
+    $this->assertText('Please configure the Yahoo Terms module before use.');
     
   }
 
@@ -116,10 +116,10 @@ So, I just got done batch exporting 88 items including 19 super complex content 
     $this->clickLink('Add Yahoo Terms');
 
     $this->assertText('New tags = ');
-    $this->assertText('operations,');
-    $this->assertText('batch queue,');
-    $this->assertText('code,');
     $this->assertText('laborious tasks,'); 
+    $this->assertText('community tools,');
+    $this->assertText('content types,');
+
     //batch operations, compatibility issues, callback function, callbacks, php function, timeouts, error message, amp, logic, discovery
 
     $this->drupalLogout();
