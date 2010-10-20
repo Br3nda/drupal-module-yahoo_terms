@@ -257,6 +257,14 @@ function yahoo_terms_admin_settings() {
     '#required' => TRUE,
     '#default_value' => variable_get('yahoo_terms_vocab', ''),
   );
+  $form['yahoo_terms_types'] = array(
+    '#title' => t('Process Yahoo Terms only these types only'),
+    '#description' => t('If no types are selected, then all types will be used.'),
+    '#type' => 'select',
+    '#options' => node_get_types('names'),
+    '#multiple' => TRUE,
+    '#default_value' => variable_get('yahoo_terms_types', array()),
+  );
   $form['vocabs']['message'] = array('#type' => 'markup', '#value' => '<p>'. t('Vocaburies by content type are configured at !link', array('!link' => l('admin/content/types', 'admin/content/types'))) . '</p>') ;
   return system_settings_form($form);
 }
@@ -357,15 +365,21 @@ function yahoo_terms_nodeapi(&$node, $op, $vid = NULL, $query = NULL) {
     case 'insert':
       $vid = _yahoo_terms_which_vocab($node->type);
       $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
+      $types = variable_get('yahoo_terms_types', array());
       if (is_numeric($vid) && ($automatic == YAHOO_TERMS_ON_NODE_CREATION || $automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE)) {
-        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+        if (count($types) == 0 || isset($types[$node->type])) {
+          yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+        }
       }
       break;
     case 'update':
       $vid = _yahoo_terms_which_vocab($node->type);
       $automatic = variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY);
       if (is_numeric($vid) && $automatic == YAHOO_TERMS_ON_NODE_CREATION_AND_UPDATE) {
-        yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+        $types = variable_get('yahoo_terms_types', array());
+        if (count($types) == 0 || isset($types[$node->type])) {
+          yahoo_terms_node_assign_keywords($node, "", array(), $vid);
+        }
       }
       break;
     case 'prepare':
@@ -434,16 +448,16 @@ function yahoo_terms_batch() {
       '#collapsed' => FALSE
   );
 
-  $types = node_get_types();
-  foreach ($types as $key => $type) {
-    $select[$key] = $key;
+  $types = variable_get('yahoo_terms_types', array());
+  if (count($types) == 0) {
+    $types = node_get_types('names');
   }
   unset($types);
   
   $form['yahoo_terms_batch']['type'] = array(
       '#title' => t('Content type'),
       '#type' => 'select',
-      '#options' => $select,
+      '#options' => $types,
       '#required' => TRUE,
   );
                                               
