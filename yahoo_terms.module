@@ -132,9 +132,10 @@ function _yahoo_terms_which_vocab($type) {
 function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid, $static = FALSE) {
   $text = ($node->body != '') ? $node->body : $node->title;
   if (empty($text)) {
-    drupal_set_message("Text is empty");
+    drupal_set_message(t("There is no text in this node, so yahoo terms module is unable to add tags."));
     return;
   }
+  
   $limit = variable_get('yahoo_terms_taxonomy_limit_for_'. $node->type, FALSE);
   $limit = ($limit === FALSE) ? variable_get('yahoo_terms_taxonomy_limit', -1) : $limit;
   $terms = yahoo_terms_text_get_keywords($text, $query, $limit, $blacklist);
@@ -142,12 +143,15 @@ function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid,
     drupal_set_message('No tags returned by Yahoo');
     return;
   }
-  drupal_set_message('New tags = ' . implode($terms, ', '));
+  drupal_set_message(t('New tags = %tags', array('%tags' => implode($terms, ', '))));
   $tids = _yahoo_terms_create_vocabulary_items($terms, $vid, $static);
   if (!is_array($tids)) { return; }
   $tids_in_node = array_keys($node->taxonomy);
   $tids_fetched = array_keys($tids);
+  
+  //do we already have tags on this node?
   if ($node->taxonomy) {
+    //get existing tags
     $tids_in_node = array_keys($node->taxonomy);
     // Union of these arrays
     $tids_now = $tids_in_node + $tids_fetched;
@@ -455,7 +459,8 @@ function yahoo_terms_batch_submit_handler($form_id, &$form_state) {
   $rewrite = check_plain($form_state['values']['rewrite']);
   $vocab_id = intval($form_state['values']['vid']);
 
-  $num_nodes = db_result(db_query("SELECT nid FROM {node} WHERE type = '%s'", $type));
+  $num_nodes = db_select('node')
+    ->fdb_result(db_query("SELECT nid FROM {node} WHERE type = '%s'", $type));
   $num_per_run = 10;
 //   for($i=0; $i<=$num_nodes; $i+=$num_per_run) {
     $operations[] = array('yahoo_terms_batch_run', array($type, $rewrite, $vocab_id, $num_per_run));
