@@ -79,6 +79,7 @@ function yahoo_terms_text_get_keywords($text, $query = "", $limit = -1, $blackli
   curl_setopt($query_yahooapi, CURLOPT_POST, 1);
   curl_setopt($query_yahooapi, CURLOPT_POSTFIELDS, $yahoo_options);
   curl_setopt($query_yahooapi, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($query_yahooapi, CURLOPT_TIMEOUT, variable_set('yahoo_terms_timeout', 15));
   $result = curl_exec($query_yahooapi);
   if (curl_errno($query_yahooapi) != 0) {
     return FALSE;
