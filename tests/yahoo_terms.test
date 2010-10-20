@@ -1,5 +1,5 @@
 <?php
-// $Id: yahoo_terms.test,v 1.13 2010/10/07 04:08:24 taniwha Exp $
+// $Id: yahoo_terms.test,v 1.5.2.2 2010/10/20 20:54:53 taniwha Exp $
 
 /**
  * @file
@@ -115,7 +115,7 @@ So, I just got done batch exporting 88 items including 19 super complex content 
     $this->assertText('HELLO WORLD');
     $this->clickLink('Add Yahoo Terms');
 
-    $this->assertText('New tags = ');
+    $this->assertText('Tags returned by Yahoo Terms service =');
     $this->assertText('laborious tasks,'); 
     $this->assertText('community tools,');
     $this->assertText('content types,');
