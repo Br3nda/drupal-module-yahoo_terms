@@ -243,6 +243,13 @@ function yahoo_terms_admin_settings() {
     '#default_value' => variable_get('yahoo_terms_enable_runtime', YAHOO_TERMS_ONLY_MANUALLY),
     '#required' => TRUE,
   );
+  $form['yahoo_terms_timeout'] = array(
+    '#type' => 'textfield',
+    '#default_value' => variable_get('yahoo_terms_timeout', 15),
+    '#title' => t('http time out'),
+    '#description' => t('Max number of seconds to wait per request to Yahoo\'s terms service')
+  );
+  
   $form['vocabs'] = array(
     '#type' => 'fieldset', 
     '#title' => t('Vocabularies'),
