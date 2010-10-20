@@ -145,6 +145,7 @@ function yahoo_terms_node_assign_keywords(&$node, $query = "", $blacklist, $vid,
   drupal_set_message(t('Tags returned by Yahoo Terms service = %tags', array('%tags' => implode($terms, ', '))));
   $tids = _yahoo_terms_create_vocabulary_items($terms, $vid, $static);
   if (!is_array($tids)) { return; }
+  if(!is_array($node->taxonomy)) $node->taxonomy = array();
   $tids_in_node = array_keys($node->taxonomy);
   $tids_fetched = array_keys($tids);
   if ($node->taxonomy) {
