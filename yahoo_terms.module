@@ -460,7 +460,7 @@ function yahoo_terms_batch() {
   if (count($types) == 0) {
     $types = node_get_types('names');
   }
-  unset($types);
+  
   
   $form['yahoo_terms_batch']['type'] = array(
       '#title' => t('Content type'),
@@ -468,6 +468,7 @@ function yahoo_terms_batch() {
       '#options' => $types,
       '#required' => TRUE,
   );
+  unset($types);
                                               
   $select_voc = _yahoo_terms_vocab_select();
     
@@ -545,7 +546,8 @@ function yahoo_terms_batch_run($type, $rewrite, $vocab_id, $num_per_run, &$conte
 
   if (empty($context['sandbox'])) {
     $context['sandbox']['progress'] = 0;
-    $context['sandbox']['max'] = db_result(db_query("SELECT nid FROM {node} WHERE type = '%s'", $type));
+    $count = db_fetch_object(db_query("SELECT count(nid) as num FROM {node} WHERE type = '%s'", $type));
+    $context['sandbox']['max'] = $count->num;
     $context['sandbox']['total'] = $context['sandbox']['max'];
     $context['sandbox']['page_num'] = 0;
     
